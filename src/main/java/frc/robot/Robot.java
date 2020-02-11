@@ -112,7 +112,7 @@ public class Robot extends TimedRobot {
     String colorString; //No touch
     ColorMatchResult match = colorMatcher.matchClosestColor(detectedColor);//No touch
 
-    if (match.color == kBlueTarget) {
+    if (match.color == kBlueTarget) {  //color sensor stuff
       colorString = "Blue";
     } else if (match.color == kRedTarget) {
       colorString = "Red";
