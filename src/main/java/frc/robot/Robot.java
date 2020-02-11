@@ -7,7 +7,10 @@
 
 package frc.robot;
 
+import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
 import com.ctre.phoenix.motorcontrol.TalonFXSensorCollection;
+import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.revrobotics.ColorMatch;
 import com.revrobotics.ColorMatchResult;
@@ -16,6 +19,7 @@ import com.revrobotics.ColorSensorV3;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.controller.PIDController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
@@ -25,10 +29,10 @@ import edu.wpi.first.wpilibj.util.Color;
 public class Robot extends TimedRobot {
   WPI_TalonFX left = new WPI_TalonFX(1);
   WPI_TalonFX right = new WPI_TalonFX(2);
-  WPI_TalonFX leftshoot = new WPI_TalonFX(3);
-  WPI_TalonFX rightshoot = new WPI_TalonFX(4);
+  WPI_TalonFX leftshoot = new WPI_TalonFX(8);
+  WPI_TalonFX rightshoot = new WPI_TalonFX(7);
   DifferentialDrive mainDrive = new DifferentialDrive(left, right);
-  
+  SpeedControllerGroup shooterstuff = new SpeedControllerGroup(leftshoot, rightshoot);
   Limelight limelight = new Limelight();
 
   Joystick driver = new Joystick(0);
@@ -49,13 +53,17 @@ public class Robot extends TimedRobot {
   PIDController vision_rot = new PIDController(0.0333, 0, 0);
   PIDController shooterSpeedPID = new PIDController(0.0001, 0, 0);
 
+  TalonFX yeah = new TalonFX(6);
   TalonFXSensorCollection leftShootEnc = leftshoot.getSensorCollection();
+  
 
   DigitalInput proximity_sensor = new DigitalInput(0);
 
   @Override
   public void robotInit() {
+    rightshoot.setInverted(true);
     leftShootEnc.getIntegratedSensorVelocity();
+
     colorMatcher.addColorMatch(kBlueTarget);
     colorMatcher.addColorMatch(kGreenTarget);
     colorMatcher.addColorMatch(kRedTarget);
@@ -81,8 +89,9 @@ public class Robot extends TimedRobot {
 
     if(!driver.getRawButton(1) && (Math.abs(x)>= 0.075 || Math.abs(y)>= 0.075)) {
       mainDrive.curvatureDrive(x, y, Math.abs(y) < 0.1); 
-    } else if(limelight.hasValidTarget()) {
+    } else if(driver.getRawButton(1) && limelight.hasValidTarget()) {
       double vision_x = vision_rot.calculate(limelight.getX());
+
       double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity(), getSpeed(0));
 
       mainDrive.arcadeDrive(0, vision_x);
@@ -93,6 +102,7 @@ public class Robot extends TimedRobot {
 
     if(driver.getRawButton(2)) {
       leftshoot.set(0.5);
+      rightshoot.set(ControlMode.Follower,3);
       SmartDashboard.putNumber("Shooter Encoder Speed", leftShootEnc.getIntegratedSensorVelocity());
     } else {
       leftshoot.set(0);
@@ -126,6 +136,12 @@ public class Robot extends TimedRobot {
 
   @Override
   public void testPeriodic() {
+
+    if(driver.getRawButton(1)) {
+      shooterstuff.set(1);
+    } else {
+      shooterstuff.set(0);
+    }
   }
 
   public double getSpeed(double distance) {
