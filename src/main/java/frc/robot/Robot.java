@@ -16,10 +16,12 @@ import com.revrobotics.ColorMatchResult;
 import com.revrobotics.ColorSensorV3;
 
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.I2C.Port;
 import edu.wpi.first.wpilibj.controller.PIDController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
@@ -38,6 +40,12 @@ public class Robot extends TimedRobot {
   WPI_TalonFX leftshooter = new WPI_TalonFX(8);
   WPI_TalonFX rightshooter = new WPI_TalonFX(7);
   SpeedControllerGroup shooter = new SpeedControllerGroup(leftshooter, rightshooter);
+
+  DoubleSolenoid shifter = new DoubleSolenoid(3, 4); //Flip the order of the numbers if this is backwards
+  DoubleSolenoid intakePiston = new DoubleSolenoid(2, 5);
+  DoubleSolenoid angler = new DoubleSolenoid(1, 6); 
+  Value out = Value.kForward;
+  Value in = Value.kReverse;
 
   final I2C.Port i2cPort = I2C.Port.kOnboard;//This tells the RoboRIO where it can communicate with the color sensor
   final ColorSensorV3 colorSensor = new ColorSensorV3(i2cPort);//This is the actual object that senses colors
@@ -73,6 +81,8 @@ public class Robot extends TimedRobot {
   DigitalInput slot3 = new DigitalInput(4);
   AutonType autonMode; //This is used to select which auton mode the robot must do
   int step; //This keeps track of which step of the auton sequence it is in
+
+  final static double lowGear = Math.PI*4.0/30680.0;
 
   @Override
   public void robotInit() {
@@ -148,6 +158,12 @@ public class Robot extends TimedRobot {
 
     } else {
       mainDrive.curvatureDrive(0, 0, false);
+    }
+
+    if(driver.getRawButton(2)) {
+      shifter.set(out);
+    } else {
+      shifter.set(in);
     }
 
     if (driver.getRawButton(1)) {
@@ -292,7 +308,7 @@ public class Robot extends TimedRobot {
   }
 
   double getDriveDistance() { //This function uses the drive encoder to calculate how far the robot has driven
-    return leftDriveEnc.getIntegratedSensorPosition() * (1./2048.);
+    return leftDriveEnc.getIntegratedSensorPosition() * lowGear;
   }
 
   enum AutonType {//A list of different auton types
