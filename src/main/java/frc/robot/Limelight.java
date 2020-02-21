@@ -26,6 +26,8 @@ public class Limelight {
     NetworkTableEntry ledMode;//Table to set blinking leds
     NetworkTableEntry camMode;//Table to set camera mode
     NetworkTableEntry pipeline;//Table to switch pipelines
+    NetworkTableEntry solvePNP;
+    double[] defaultArray = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     public Limelight() {
         limelight = NetworkTableInstance.getDefault().getTable("limelight");//Instantiate the tables
@@ -42,6 +44,47 @@ public class Limelight {
         ledMode = limelight.getEntry("ledMode");
         camMode = limelight.getEntry("camMode");
         pipeline = limelight.getEntry("pipeline");
+        solvePNP = limelight.getEntry("camtran");
+    }
+
+    /**
+     * This function uses the Limelight's Solve3D function to compute the distance from the target in inches. The limelight must be in Solve3D mode with High-Res enabled.
+     * @return Distance from the target
+     */
+    public double getDistance() {
+        return Math.sqrt(Math.pow(getXPos(), 2) + Math.pow(getYPos(), 2));
+    }
+
+    /**
+     * This function uses the Limelight's Solve3D function to compute the x-distance from the target in inches. The limelight must be in Solve3D mode with High-Res enabled.
+     * @return x-distance from the target in inches
+     */
+    public double getXPos() {
+        return solvePNP.getDoubleArray(defaultArray)[0];
+    }
+
+    /**
+     * This function uses the Limelight's Solve3D function to compute the y-distance from the target in inches. The limelight must be in Solve3D mode with High-Res enabled.
+     * @return y-distance from the target in inches
+     */
+    public double getYPos() {
+        return solvePNP.getDoubleArray(defaultArray)[1];
+    }
+
+    public double getZPos() {
+        return solvePNP.getDoubleArray(defaultArray)[2];
+    }
+
+    public double getPitch() {
+        return solvePNP.getDoubleArray(defaultArray)[3];
+    }
+
+    public double getYaw() {
+        return solvePNP.getDoubleArray(defaultArray)[4];
+    }
+
+    public double getRoll() {
+        return solvePNP.getDoubleArray(defaultArray)[5];
     }
 
     public double getX() {
