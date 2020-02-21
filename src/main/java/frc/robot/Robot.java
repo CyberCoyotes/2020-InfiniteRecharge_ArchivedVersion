@@ -8,15 +8,16 @@
 package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
-import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
+import com.ctre.phoenix.motorcontrol.SensorCollection;
 import com.ctre.phoenix.motorcontrol.TalonFXSensorCollection;
-import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
+import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 import com.revrobotics.ColorMatch;
 import com.revrobotics.ColorMatchResult;
 import com.revrobotics.ColorSensorV3;
 
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
@@ -31,6 +32,10 @@ public class Robot extends TimedRobot {
   WPI_TalonFX right = new WPI_TalonFX(2);
   WPI_TalonFX leftshoot = new WPI_TalonFX(8);
   WPI_TalonFX rightshoot = new WPI_TalonFX(7);
+  WPI_TalonFX advanceBelt = new WPI_TalonFX(3);
+  WPI_TalonFX advanceThing = new WPI_TalonFX(4);
+  WPI_VictorSPX intake = new WPI_VictorSPX(5);
+  
   DifferentialDrive mainDrive = new DifferentialDrive(left, right);
   SpeedControllerGroup shooterstuff = new SpeedControllerGroup(leftshoot, rightshoot);
   Limelight limelight = new Limelight();
@@ -53,14 +58,15 @@ public class Robot extends TimedRobot {
   PIDController vision_rot = new PIDController(0.0333, 0, 0);
   PIDController shooterSpeedPID = new PIDController(0.0001, 0, 0);
 
-  TalonFX yeah = new TalonFX(6);
   TalonFXSensorCollection leftShootEnc = leftshoot.getSensorCollection();
+  Encoder rotenc = new Encoder(0, 1, false, Encoder.EncodingType.k2X);
   
 
   DigitalInput proximity_sensor = new DigitalInput(0);
 
   @Override
   public void robotInit() {
+    rotenc.setDistancePerPulse(1./1024);
     rightshoot.setInverted(true);
     leftShootEnc.getIntegratedSensorVelocity();
 
@@ -68,10 +74,13 @@ public class Robot extends TimedRobot {
     colorMatcher.addColorMatch(kGreenTarget);
     colorMatcher.addColorMatch(kRedTarget);
     colorMatcher.addColorMatch(kYellowTarget); 
+
   }
 
   @Override
   public void robotPeriodic() {
+    SmartDashboard.putNumber("shooter rotations", rotenc.getDistance());
+  
   }
 
   @Override
@@ -91,18 +100,19 @@ public class Robot extends TimedRobot {
       mainDrive.curvatureDrive(x, y, Math.abs(y) < 0.1); 
     } else if(driver.getRawButton(1) && limelight.hasValidTarget()) {
       double vision_x = vision_rot.calculate(limelight.getX());
-
+  
       double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity(), getSpeed(0));
+
+      shooterstuff.set(shooterSpeed);
 
       mainDrive.arcadeDrive(0, vision_x);
 
     } else { 
       mainDrive.curvatureDrive(0, 0, false);
     }
-
     if(driver.getRawButton(2)) {
       leftshoot.set(0.5);
-      rightshoot.set(ControlMode.Follower,3);
+      rightshoot.set(ControlMode.Follower,7);
       SmartDashboard.putNumber("Shooter Encoder Speed", leftShootEnc.getIntegratedSensorVelocity());
     } else {
       leftshoot.set(0);
@@ -138,7 +148,7 @@ public class Robot extends TimedRobot {
   public void testPeriodic() {
 
     if(driver.getRawButton(1)) {
-      shooterstuff.set(1);
+      shooterstuff.set(0.80);
     } else {
       shooterstuff.set(0);
     }
