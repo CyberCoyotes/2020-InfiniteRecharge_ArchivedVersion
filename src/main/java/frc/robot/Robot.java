@@ -150,7 +150,7 @@ public class Robot extends TimedRobot {
     final double x = driver.getRawAxis(1);
     final double y = driver.getRawAxis(2);
 
-    //This part represents the drive code. The first part does the threshholding as
+    //This part represents the drive code. The first part does the threshholding as /
     //normal, and includes a get raw button thing that will override the manual drive
     //and switch to vision-targeting mode.
     if (!driver.getRawButton(1) && (Math.abs(x) >= 0.095 || Math.abs(y) >= 0.095)) { 
