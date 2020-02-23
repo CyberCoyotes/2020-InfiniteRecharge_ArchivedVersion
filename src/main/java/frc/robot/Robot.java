@@ -30,18 +30,23 @@ import edu.wpi.first.wpilibj.util.Color;
 
 public class Robot extends TimedRobot {
 
-  WPI_TalonFX left = new WPI_TalonFX(1);
-  WPI_TalonFX right = new WPI_TalonFX(2);
+  WPI_TalonFX left1 = new WPI_TalonFX(1);
+  WPI_TalonFX left2 = new WPI_TalonFX(2);
+  WPI_TalonFX right1 = new WPI_TalonFX(3);
+  WPI_TalonFX right2 = new WPI_TalonFX(4);
+  SpeedControllerGroup left = new SpeedControllerGroup(left1, left2);
+  SpeedControllerGroup right = new SpeedControllerGroup(right1, right2);
   DifferentialDrive mainDrive = new DifferentialDrive(left, right);
 
-  WPI_TalonFX advanceBelt = new WPI_TalonFX(3);
-  WPI_TalonFX advanceThing = new WPI_TalonFX(4);
-  WPI_VictorSPX intake = new WPI_VictorSPX(5);
+  WPI_TalonFX lifter = new WPI_TalonFX(10);
+  WPI_TalonFX advanceBelt = new WPI_TalonFX(5);
+  WPI_TalonFX advanceThing = new WPI_TalonFX(6);
+  WPI_VictorSPX intake = new WPI_VictorSPX(7);
   WPI_TalonFX leftshooter = new WPI_TalonFX(8);
-  WPI_TalonFX rightshooter = new WPI_TalonFX(7);
+  WPI_TalonFX rightshooter = new WPI_TalonFX(9);
   SpeedControllerGroup shooter = new SpeedControllerGroup(leftshooter, rightshooter);
 
-  DoubleSolenoid shifter = new DoubleSolenoid(3, 4); //Flip the order of the numbers if this is backwards
+  DoubleSolenoid shifter = new DoubleSolenoid(4, 3); //Flip the order of the numbers if this is backwards
   DoubleSolenoid intakePiston = new DoubleSolenoid(2, 5);
   DoubleSolenoid angler = new DoubleSolenoid(1, 6); 
   Value out = Value.kForward;
@@ -63,7 +68,7 @@ public class Robot extends TimedRobot {
 
   Limelight limelight = new Limelight();
   AHRS gyro = new AHRS(Port.kMXP); //NavX
-  TalonFXSensorCollection leftDriveEnc = left.getSensorCollection();
+  TalonFXSensorCollection leftDriveEnc = left1.getSensorCollection();
   TalonFXSensorCollection leftShootEnc = leftshooter.getSensorCollection();
   Joystick driver = new Joystick(0);
   ////Encoder rotenc = new Encoder(0, 1, false, Encoder.EncodingType.k2X);
@@ -142,14 +147,14 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    final double x = driver.getRawAxis(0);
-    final double y = driver.getRawAxis(1);
+    final double x = driver.getRawAxis(1);
+    final double y = driver.getRawAxis(2);
 
     //This part represents the drive code. The first part does the threshholding as
     //normal, and includes a get raw button thing that will override the manual drive
     //and switch to vision-targeting mode.
-    if (!driver.getRawButton(1) && (Math.abs(x) >= 0.075 || Math.abs(y) >= 0.075)) { 
-      mainDrive.curvatureDrive(x, y, Math.abs(y) < 0.1);
+    if (!driver.getRawButton(1) && (Math.abs(x) >= 0.095 || Math.abs(y) >= 0.095)) { 
+      mainDrive.curvatureDrive(x, y, Math.abs(y) > 0.1);
     } else if (driver.getRawButton(1) && limelight.hasValidTarget()) { //If the driver is pulling the trigger and the limelight has a target, go into vision-targeting mode
       final double vision_x = vision_rot.calculate(limelight.getX()); //Calculate how fast the
       //final double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity(), getSpeed(0));
@@ -216,11 +221,12 @@ public class Robot extends TimedRobot {
 
   @Override
   public void testPeriodic() {
-
-    if (driver.getRawButton(1)) {
-      shooter.set(1.0);
+    double x = driver.getRawAxis(1);
+    double y = driver.getRawAxis(2);
+    if(Math.abs(x) >= 0.095 || Math.abs(y) >= 0.095){
+      mainDrive.curvatureDrive(x, y, Math.abs(y) > 0.1);
     } else {
-      shooter.set(0);
+      mainDrive.curvatureDrive(0, 0, false);
     }
 
     /**
