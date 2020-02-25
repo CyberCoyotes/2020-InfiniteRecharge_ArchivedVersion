@@ -7,7 +7,7 @@
 
 package frc.robot;
 
-import com.ctre.phoenix.motorcontrol.TalonFXSensorCollection;
+//import com.ctre.phoenix.motorcontrol.TalonFXSensorCollection;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 import com.kauailabs.navx.frc.AHRS;
@@ -42,9 +42,9 @@ public class Robot extends TimedRobot {
   WPI_TalonFX advanceBelt = new WPI_TalonFX(5);
   WPI_TalonFX advanceThing = new WPI_TalonFX(6);
   WPI_VictorSPX intake = new WPI_VictorSPX(7);
-  WPI_TalonFX leftshooter = new WPI_TalonFX(8);
-  WPI_TalonFX rightshooter = new WPI_TalonFX(9);
-  SpeedControllerGroup shooter = new SpeedControllerGroup(leftshooter, rightshooter);
+  WPI_TalonFX leftShooter = new WPI_TalonFX(8);
+  WPI_TalonFX rightShooter = new WPI_TalonFX(9);
+  SpeedControllerGroup shooter = new SpeedControllerGroup(leftShooter, rightShooter);
 
   DoubleSolenoid shifter = new DoubleSolenoid(4, 3); //Flip the order of the numbers if this is backwards
   DoubleSolenoid intakePiston = new DoubleSolenoid(2, 5);
@@ -68,8 +68,10 @@ public class Robot extends TimedRobot {
 
   Limelight limelight = new Limelight();
   AHRS gyro = new AHRS(Port.kMXP); //NavX
-  TalonFXSensorCollection leftDriveEnc = left1.getSensorCollection();
-  TalonFXSensorCollection leftShootEnc = leftshooter.getSensorCollection();
+  CTREEncoder leftDriveEnc = new CTREEncoder(left1, false);
+  CTREEncoder leftShootEnc = new CTREEncoder(leftShooter, false);
+  //TalonFXSensorCollection leftDriveEnc = left1.getSensorCollection();
+  //TalonFXSensorCollection leftShootEnc = leftShooter.getSensorCollection();
   Joystick driver = new Joystick(0);
   ////Encoder rotenc = new Encoder(0, 1, false, Encoder.EncodingType.k2X);
 
@@ -92,7 +94,7 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     ////rotenc.setDistancePerPulse(1./2048);
-    rightshooter.setInverted(true);
+    rightShooter.setInverted(true);
 
     colorMatcher.addColorMatch(kBlueTarget);
     colorMatcher.addColorMatch(kGreenTarget);
@@ -205,8 +207,8 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("Limelight width", limelight.getWidth());
     SmartDashboard.putBoolean("Proximity Sensor", proximity_sensor.get());
     
-    SmartDashboard.putNumber("Shooter Encoder Speed", leftShootEnc.getIntegratedSensorVelocity());
-    SmartDashboard.putNumber("Drive Encoder", leftDriveEnc.getIntegratedSensorPosition());
+    SmartDashboard.putNumber("Shooter Encoder Speed", leftShootEnc.getVelocity());
+    SmartDashboard.putNumber("Drive Encoder", leftDriveEnc.get());
 
     if(driver.getRawButtonPressed(12)) {
       limelight.setPipeline(2);
@@ -233,7 +235,7 @@ public class Robot extends TimedRobot {
     double measuredSpeed = ......;
     if(driver.getRawButton(1)) {
       shooterSpeedPID.setSetpoint(measuredSpeed/2);
-      double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity());
+      double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getVelocity);
 
       shooter.set(shooterSpeed);
     } else {
@@ -314,7 +316,7 @@ public class Robot extends TimedRobot {
   }
 
   double getDriveDistance() { //This function uses the drive encoder to calculate how far the robot has driven
-    return leftDriveEnc.getIntegratedSensorPosition() * lowGear;
+    return leftDriveEnc.get() * lowGear;
   }
 
   enum AutonType {//A list of different auton types
