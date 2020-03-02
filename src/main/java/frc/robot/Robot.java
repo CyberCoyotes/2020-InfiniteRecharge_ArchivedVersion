@@ -7,22 +7,13 @@
 
 package frc.robot;
 
-import java.util.regex.Pattern;
-
-import com.ctre.phoenix.motorcontrol.ControlMode;
-import com.ctre.phoenix.motorcontrol.FollowerType;
-import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
 import com.ctre.phoenix.motorcontrol.TalonFXSensorCollection;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 import com.kauailabs.navx.frc.AHRS;
-import com.revrobotics.ColorMatch;
-import com.revrobotics.ColorMatchResult;
-import com.revrobotics.ColorSensorV3;
 
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.TimedRobot;
@@ -31,7 +22,6 @@ import edu.wpi.first.wpilibj.I2C.Port;
 import edu.wpi.first.wpilibj.controller.PIDController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.util.Color;
 
 public class Robot extends TimedRobot {
 
@@ -58,20 +48,6 @@ public class Robot extends TimedRobot {
   Value out = Value.kForward;
   Value in = Value.kReverse;
 
-  final I2C.Port i2cPort = I2C.Port.kOnboard;//This tells the RoboRIO where it can communicate with the color sensor
-  final ColorSensorV3 colorSensor = new ColorSensorV3(i2cPort);//This is the actual object that senses colors
-  final ColorMatch colorMatcher = new ColorMatch();//This is basically an object that does a lot of math to calculate what color is seen
-
-  /*Every visible color can be described in different proportions of red, green and blue.
-  These objects defines these proportions from a scale of 0 to 1, with 0 being it does
-  not use that part (like red) or 1, meaning LOTS of red. Theoretically, the color yellow
-  would be "1.0, 1.0, 0.0", but unfortunately things don't work that way. */
-  //                                              Red   Green   Blue
-  final Color kBlueTarget = ColorMatch.makeColor(0.143, 0.427, 0.429);
-  final Color kGreenTarget = ColorMatch.makeColor(0.197, 0.561, 0.240);
-  final Color kRedTarget = ColorMatch.makeColor(0.561, 0.232, 0.114);
-  final Color kYellowTarget = ColorMatch.makeColor(0.361, 0.524, 0.113);
-
   Limelight limelight = new Limelight();
   AHRS gyro = new AHRS(Port.kMXP); //NavX
   //CTREEncoder leftDriveEnc = new CTREEncoder(left1, false);
@@ -85,8 +61,8 @@ public class Robot extends TimedRobot {
   //First term (P): If the robot overshoots too much, make the first number smaller
   //Second term (I): Start 0.000001 and then double until it does stuff
   //Third term (D): To make the adjustment process go faster, start D at like 0.001 and tune
-  final double kRotation = 0.0450;
-  PIDController shooterSpeedPID = new PIDController(0.0001, 0, 0); //Tune me!
+  PIDController turnPID = new PIDController(0.02, 0.05, 0);
+  PIDController shooterSpeedPID = new PIDController(0.00003, 0.0002, 0); //Tune me!
   PIDController strPID = new PIDController(0.05, 0, 0);
   
   DigitalInput proximity_sensor = new DigitalInput(0);//Infrared sensor
@@ -104,13 +80,6 @@ public class Robot extends TimedRobot {
     rightShooter.setInverted(true);
     accelerator.setInverted(true);
     intake.setInverted(true);
-
-    colorMatcher.addColorMatch(kBlueTarget);
-    colorMatcher.addColorMatch(kGreenTarget);
-    colorMatcher.addColorMatch(kRedTarget);
-    colorMatcher.addColorMatch(kYellowTarget); 
-
-
   }
 
   @Override
@@ -177,8 +146,8 @@ public class Robot extends TimedRobot {
     } else if (driver.getRawButton(1) && limelight.hasValidTarget()) { //If the driver is pulling the trigger and the limelight has a target, go into vision-targeting mode
       //final double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity(), getSpeed(0));
       //shooter.set(shooterSpeed);
-      double rotationSpeed = -limelight.getX() * kRotation;
-      mainDrive.arcadeDrive(0, rotationSpeed);
+      //double rotationSpeed = -limelight.getX() * kRotation;
+      //mainDrive.arcadeDrive(0, rotationSpeed);
     } else {
       mainDrive.arcadeDrive(0, 0, false);
     }
@@ -193,70 +162,100 @@ public class Robot extends TimedRobot {
 
 
 
-    //MANIP CONTROLS//
-  double acceleratorwheel = manip.getRawAxis(2);
-  double shoot = manip.getRawAxis(2);
-  double advancer = manip.getRawAxis(1);
-  double hoppermove = manip.getRawAxis(1);
-  if(Math.abs(shoot) >= 0.075) {
-    shooter.set(shoot);
-    accelerator.set(acceleratorwheel/2);
-  } else {
-    shooter.set(0);
-    accelerator.set(0);
-  }
+      //MANIP CONTROLS//
+    double acceleratorwheel = manip.getRawAxis(2);
+    double shoot = manip.getRawAxis(2);
+    double advancer = manip.getRawAxis(1);
+    double hoppermove = manip.getRawAxis(1);
+    if(Math.abs(shoot) >= 0.075) {
+      shooter.set(shoot);
+      accelerator.set(acceleratorwheel/2);
+    } else {
+      shooter.set(0);
+      accelerator.set(0);
+    }
 
-  if(Math.abs(advancer) >= 0.075) {
-   advanceBelt.set(advancer);
-   hopper.set(hoppermove);
-  } else {
-    advanceBelt.set(0);
-    hopper.set(hoppermove);
+    if(Math.abs(advancer) >= 0.075) {
+      advanceBelt.set(advancer);
+      hopper.set(hoppermove);
+    } else {
+      advanceBelt.set(0);
+      hopper.set(hoppermove);
+    }
+    if(manip.getRawButton(4)) {
+      angler.set(in);
+    } else {
+      angler.set(out);
+    }
+    if(manip.getRawButton(1)) {
+      intakePiston.set(out);
+      intake.set(.5);
+    } else {
+      intakePiston.set(in);
+      intake.set(0);
+    }
   }
-  if(manip.getRawButton(4)) {
-    angler.set(in);
-  } else {
-    angler.set(out);
-  }
-  if(manip.getRawButton(1)) {
-    intakePiston.set(out);
-    intake.set(.5);
-  } else {
-    intakePiston.set(in);
-    intake.set(0);
-  }
-  
-}
 
 
   void read() {
     
-    SmartDashboard.putNumber("Shooter Encoder Speed", leftShootEnc.getIntegratedSensorVelocity());
-    SmartDashboard.putNumber("Drive Encoder", leftDriveEnc.getIntegratedSensorPosition());
+    //SmartDashboard.putNumber("Shooter Encoder Speed", leftShootEnc.getIntegratedSensorVelocity());
+    //SmartDashboard.putNumber("Drive Encoder", leftDriveEnc.getIntegratedSensorPosition());
     SmartDashboard.putNumber("Distance", (91.0-42.75) / Math.tan(limelight.getY() * Math.PI/180.));
   }
-
+  double lastTurn = 1;
   @Override
   public void testPeriodic() {
-    
+
+    final double rot = driver.getRawAxis(2);
+    final double y = driver.getRawAxis(1);
+    if(!driver.getRawButton(1) && Math.abs(rot) >= 0.09 || Math.abs(y) >= 0.09) {
+      mainDrive.arcadeDrive(-y, -rot);
+    } else if (driver.getRawButton(1) && limelight.hasValidTarget()) { //If the driver is pulling the trigger and the limelight has a target, go into vision-targeting mode
+      turnPID.setSetpoint(0.0);
+      double rotationSpeed = turnPID.calculate(limelight.getX());
+      if(rotationSpeed/Math.abs(rotationSpeed) != lastTurn/Math.abs(lastTurn)) {
+        turnPID.reset();
+      }
+      mainDrive.arcadeDrive(0.0, rotationSpeed);
+      System.out.println(limelight.getX());
+      lastTurn = rotationSpeed;
+    } else {
+      turnPID.reset();
+      mainDrive.arcadeDrive(0, 0);
+    }
+    if(driver.getRawButtonReleased(1)) {
+      turnPID.reset();
+    }
+    /*
+    if(driver.getRawButton(1)) {
+      shooter.set(1.0);
+      System.out.println(leftShootEnc.getIntegratedSensorVelocity());
+      //SmartDashboard.putNumber("Shooter Encoder Speed 2", leftShootEnc.getIntegratedSensorVelocity());
+    } else {
+      shooter.set(0.0);
+    }
+    */
+    /*
     double lift = manip.getRawAxis(5);
     if(Math.abs(lift) >= 0.75) {
       lifter.set(-lift/2);
     } else {
       lifter.set(0);
     }
-     
-    /**
-    double measuredSpeed = ......;
+     */
+    /*******
+    double measuredSpeed = 10000.0;
     if(driver.getRawButton(1)) {
-      shooterSpeedPID.setSetpoint(measuredSpeed/2);
-      double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getVelocity);
+      shooterSpeedPID.setSetpoint(measuredSpeed);
+      double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity());
+      shooterSpeed = Math.abs(shooterSpeed);
 
       shooter.set(shooterSpeed);
+      System.out.println(leftShootEnc.getIntegratedSensorVelocity());
     } else {
       shooter.set(0);
     }
-
     */
 
     read(); //No touch, this puts data onto the SmartDashboard
