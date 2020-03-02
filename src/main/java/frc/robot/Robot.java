@@ -85,7 +85,7 @@ public class Robot extends TimedRobot {
   //First term (P): If the robot overshoots too much, make the first number smaller
   //Second term (I): Start 0.000001 and then double until it does stuff
   //Third term (D): To make the adjustment process go faster, start D at like 0.001 and tune
-  PIDController vision_rot = new PIDController(0.0333, 0, 0);
+  final double kRotation = 0.0450;
   PIDController shooterSpeedPID = new PIDController(0.0001, 0, 0); //Tune me!
   PIDController strPID = new PIDController(0.05, 0, 0);
   
@@ -111,6 +111,11 @@ public class Robot extends TimedRobot {
     colorMatcher.addColorMatch(kYellowTarget); 
 
 
+  }
+
+  @Override
+  public void disabledPeriodic() {
+    read();
   }
 
   @Override
@@ -170,13 +175,13 @@ public class Robot extends TimedRobot {
     if(!driver.getRawButton(1) && Math.abs(rot) >= 0.09 || Math.abs(y) >= 0.09) {
       mainDrive.curvatureDrive(-y, -rot, Math.abs(y) < 0.1);
     } else if (driver.getRawButton(1) && limelight.hasValidTarget()) { //If the driver is pulling the trigger and the limelight has a target, go into vision-targeting mode
-      final double vision_x = vision_rot.calculate(limelight.getX()); //Calculate how fast the
       //final double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity(), getSpeed(0));
       //shooter.set(shooterSpeed);
-      mainDrive.arcadeDrive(0, vision_x); }
-      else{
+      double rotationSpeed = -limelight.getX() * kRotation;
+      mainDrive.arcadeDrive(0, rotationSpeed);
+    } else {
       mainDrive.arcadeDrive(0, 0, false);
-      }
+    }
 
     if(driver.getRawButton(2)) {
       shifter.set(out);
@@ -209,9 +214,9 @@ public class Robot extends TimedRobot {
     hopper.set(hoppermove);
   }
   if(manip.getRawButton(4)) {
-    angler.set(out);
-  } else {
     angler.set(in);
+  } else {
+    angler.set(out);
   }
   if(manip.getRawButton(1)) {
     intakePiston.set(out);
@@ -224,64 +229,23 @@ public class Robot extends TimedRobot {
 }
 
 
-  void read() { //Put any SmartDashboard stuff here!
-    final Color detectedColor = colorSensor.getColor(); // No touch
-    String colorString; // No touch
-    final ColorMatchResult match = colorMatcher.matchClosestColor(detectedColor);// No touch
-
-    if (match.color == kBlueTarget) {
-      colorString = "Blue";
-    } else if (match.color == kRedTarget) {
-      colorString = "Red";
-    } else if (match.color == kGreenTarget) {
-      colorString = "Green";
-    } else if (match.color == kYellowTarget) {
-      colorString = "Yellow";
-    } else {
-      colorString = "Unknown";
-    }
-    SmartDashboard.putNumber("Red", detectedColor.red);// No touch
-    SmartDashboard.putNumber("Green", detectedColor.green);// No touch
-    SmartDashboard.putNumber("Blue", detectedColor.blue);// No touch
-    SmartDashboard.putNumber("Confidence", match.confidence);// No touch
-    SmartDashboard.putString("Detected Color", colorString);// No touch
-
-    SmartDashboard.putNumber("Limelight width", limelight.getWidth());
-    SmartDashboard.putBoolean("Proximity Sensor", proximity_sensor.get());
+  void read() {
     
     SmartDashboard.putNumber("Shooter Encoder Speed", leftShootEnc.getIntegratedSensorVelocity());
     SmartDashboard.putNumber("Drive Encoder", leftDriveEnc.getIntegratedSensorPosition());
-
-    if(driver.getRawButtonPressed(12)) {
-      limelight.setPipeline(2);
-    }
-    if(driver.getRawButton(12)) {
-      SmartDashboard.putNumber("Limelight distance", limelight.getDistance());
-    }
-    if(driver.getRawButtonReleased(12)) {
-      limelight.setPipeline(1);
-    }
+    SmartDashboard.putNumber("Distance", (91.0-42.75) / Math.tan(limelight.getY() * Math.PI/180.));
   }
 
   @Override
   public void testPeriodic() {
-    final double rot = driver.getRawAxis(2);
-    final double y = driver.getRawAxis(1);
-
-    if(!driver.getRawButton(1) && Math.abs(rot) >= 0.07 || Math.abs(y) >= 0.07) {
-      mainDrive.curvatureDrive(-y, -rot, Math.abs(y) < 0.1);
-    } else if (driver.getRawButton(1) && limelight.hasValidTarget()) { //If the driver is pulling the trigger and the limelight has a target, go into vision-targeting mode
-      final double vision_x = vision_rot.calculate(limelight.getX()); //Calculate how fast the
-      //final double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity(), getSpeed(0));
-      //shooter.set(shooterSpeed);
-      mainDrive.arcadeDrive(0, vision_x); }
-      else{
-      mainDrive.arcadeDrive(0, 0, false);
-      }
-
-
-
     
+    double lift = manip.getRawAxis(5);
+    if(Math.abs(lift) >= 0.75) {
+      lifter.set(-lift/2);
+    } else {
+      lifter.set(0);
+    }
+     
     /**
     double measuredSpeed = ......;
     if(driver.getRawButton(1)) {
