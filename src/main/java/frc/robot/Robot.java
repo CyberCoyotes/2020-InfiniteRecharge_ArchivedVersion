@@ -143,14 +143,13 @@ public class Robot extends TimedRobot {
     final double y = driver.getRawAxis(1);
 
     if(!driver.getRawButton(1) && ( Math.abs(rot) >= 0.15 || Math.abs(y) >= 0.15)) {
-      mainDrive.curvatureDrive(-y, -rot, Math.abs(y) < 0.1);
+      mainDrive.curvatureDrive(-y, -rot/2., Math.abs(y) < 0.2);
       accelerator.set(0);
       shooter.set(0.0);
     } else if(driver.getRawButton(1) && limelight.hasValidTarget()) { //If the driver is pulling the trigger and the limelight has a target, go into vision-targeting mode
       System.out.println(limelight.getY());
       turnPID.setSetpoint(0.0); //Set the turning setpoint to 0 degrees
       double rotationSpeed = turnPID.calculate(limelight.getX()); //Calculate turning speed based on the limelight reading
-      accelerator.set(1);
       if(rotationSpeed != 0 && lastTurn != 0) { //Check if the current and last turn speeds are non-zero
         if((int) rotationSpeed/Math.abs(rotationSpeed) != (int) lastTurn/Math.abs(lastTurn)) { //See if the signs are equal to each other (+ or -)
           turnPID.reset(); //If the robot must change its direction, reset its PID
@@ -163,6 +162,7 @@ public class Robot extends TimedRobot {
       double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity()); //Calculate the PID speed
       shooterSpeed = Math.abs(shooterSpeed); //Make sure the wheel only spins forwards
       shooter.set(shooterSpeed); //Power the flywheel
+      accelerator.set(1); //Power the accelerator
 
       double shooterError = Math.abs(leftShootEnc.getIntegratedSensorVelocity() - shooterSpeedPID.getSetpoint()); //Calculate the error
       double turnError = Math.abs(limelight.getX()); //Calculate the error
@@ -180,7 +180,7 @@ public class Robot extends TimedRobot {
       turnPID.reset(); //Reset the PIDs and turn the onTarget indicator to false
       shooterSpeedPID.reset();
       onTarget = false;
-      //limelight.setPipeline(0);
+      limelight.setPipeline(0);
     }
 
     if(driver.getRawButton(2)) {
@@ -191,7 +191,6 @@ public class Robot extends TimedRobot {
 
 
       //MANIP CONTROLS//
-    double shoot = manip.getRawAxis(2);
     double advancer = manip.getRawAxis(1);
     double hoppermove = manip.getRawAxis(1);
 

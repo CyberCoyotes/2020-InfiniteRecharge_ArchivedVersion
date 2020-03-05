@@ -11,8 +11,8 @@ package frc.robot;
  * Add your docs here.
  */
 public class Interpolator {
-    static double angles[] = {13.06595, 10.573, 8.05872, 6.2501, 4.949104, 2.73799, 1.858061, 1.481606};
-    static double speeds[] = {13000, 13000, 13000, 12700, 12700, 12800, 14000, 16000, 17200};
+    static double angles[] = {14.02984, 13.06595, 10.573, 8.05872, 7.395187, 6.2501, 5.351089, 4.949104, 4.49338, 3.239723, 2.73799, 2.420449, 1.858061, 1.541063, 1.481606};
+    static double speeds[] = {13500, 13000, 13000, 13000, 12700, 12700, 12700, 12700, 12800, 13450, 14000, 15000, 16000, 17600, 18000};
 
     static double getInterpolation(double angle) {
         int i = 0;
