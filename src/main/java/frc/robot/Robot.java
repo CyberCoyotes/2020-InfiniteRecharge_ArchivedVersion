@@ -54,9 +54,11 @@ public class Robot extends TimedRobot {
   //CTREEncoder leftShootEnc = new CTREEncoder(leftShooter, false);
   TalonFXSensorCollection leftDriveEnc = left1.getSensorCollection();
   TalonFXSensorCollection leftShootEnc = leftShooter.getSensorCollection();
+  TalonFXSensorCollection liftEnc = lifter.getSensorCollection();
   Joystick driver = new Joystick(0);
   Joystick manip = new Joystick(1);
   ////Encoder rotenc = new Encoder(0, 1, false, Encoder.EncodingType.k2X);
+
 
   //First term (P): If the robot overshoots too much, make the first number smaller
   //Second term (I): Start 0.000001 and then double until it does stuff
@@ -64,6 +66,7 @@ public class Robot extends TimedRobot {
   PIDController turnPID = new PIDController(0.04, 0.05, 0);// 0.02, 0.05,0
   PIDController shooterSpeedPID = new PIDController(0.00003, 0.0002, 0);
   PIDController strPID = new PIDController(0.05, 0, 0);
+  PIDController liftPID = new PIDController(0.00001, 0, 0);
   
   DigitalInput proximity_sensor = new DigitalInput(0);//Infrared sensor
   DigitalInput slot1 = new DigitalInput(2); //Digital inputs for the auton switch
@@ -75,6 +78,10 @@ public class Robot extends TimedRobot {
   final static double lowGear = Math.PI*4.0/30680.0;
   boolean onTarget = false;
   double lastTurn = 1;
+  double liftPosition = 
+  0.0;
+  double liftMax =446314.000000;
+  double liftMin = 50000.0;
 
   @Override
   public void robotInit() {
@@ -82,6 +89,8 @@ public class Robot extends TimedRobot {
     accelerator.setInverted(true);
     intake.setInverted(true);
     limelight.setPipeline(1);
+    liftPID.setSetpoint(liftMin);
+    
   }
 
   @Override
@@ -91,6 +100,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotPeriodic() {
+    read();
   }
 
   @Override
@@ -214,6 +224,29 @@ public class Robot extends TimedRobot {
       intake.set(0);
     }
 
+    double liftSpeed = -manip.getRawAxis(5);
+    boolean manualLift = false;
+    if(Math.abs(liftSpeed) >= 0.2) {
+      liftPosition = liftEnc.getIntegratedSensorPosition();
+      liftPID.setSetpoint(liftPosition);
+      manualLift = true;
+    }
+    if(manualLift) {
+      if(liftSpeed > 0 && liftEnc.getIntegratedSensorPosition() > liftMax) {
+        manualLift = false;
+      } else if(liftSpeed < 0 && liftEnc.getIntegratedSensorPosition() < liftMin) {
+        manualLift = false;
+      }
+    }
+    if(manip.getRawButton(3)) liftPID.setSetpoint(liftMax + 7824);
+    if(manip.getRawButton(2)) liftPID.setSetpoint(liftMin);
+    if(!manualLift) {    
+      liftSpeed = liftPID.calculate(liftEnc.getIntegratedSensorPosition());
+    }
+    
+    lifter.set(liftSpeed);
+
+
     read(); //Put data onto the SmartDashboard
   }
 
@@ -226,6 +259,8 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("Distance", (91.0-42.75) / Math.tan(limelight.getY() * Math.PI/180.));
     SmartDashboard.putBoolean("On Target", onTarget);
     SmartDashboard.putNumber("Interpolation", Interpolator.getInterpolation(limelight.getY()));
+    SmartDashboard.putNumber("Lifter", liftEnc.getIntegratedSensorPosition());
+    SmartDashboard.putNumber("liftstick", -manip.getRawAxis(5));
   }
 
   @Override
