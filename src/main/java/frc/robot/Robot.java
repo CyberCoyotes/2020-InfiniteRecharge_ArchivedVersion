@@ -83,7 +83,7 @@ public class Robot extends TimedRobot {
   double lastTurn = 1;
   double liftPosition = 0.0;
   double liftMax =446314.000000;
-  double liftMin = 50000.0;
+  double liftMin =50000.0;
 
   @Override
   public void robotInit() {
@@ -91,8 +91,8 @@ public class Robot extends TimedRobot {
     accelerator.setInverted(true);
     intake.setInverted(true);
     limelight.setPipeline(1);
-    liftPID.setSetpoint(liftMin);
-    lifter.setInverted(true);
+    //liftPID.setSetpoint(liftMin);
+    //lifter.setInverted(true);
 
     CameraServer camera = CameraServer.getInstance();
     camera.startAutomaticCapture("cam0", 0);
@@ -219,6 +219,14 @@ public class Robot extends TimedRobot {
     double advancer = manip.getRawAxis(1);
     double hoppermove = manip.getRawAxis(1);
 
+    
+   // double intaker = manip.getRawAxis(5);
+   // if(Math.abs(intaker) >= 0.075) {
+   //   lifter.set(intaker/2.5);
+  //  } else {
+  //    lifter.set(0);
+   // }
+
     if(Math.abs(advancer) >= 0.075) {
       advanceBelt.set(advancer);
       hopper.set(hoppermove);
@@ -234,10 +242,10 @@ public class Robot extends TimedRobot {
       intake.set(0);
     }
 
-    double liftSpeed = -manip.getRawAxis(5);
+   /**  double liftSpeed = -manip.getRawAxis(5);
     boolean manualLift = false;
     if(Math.abs(liftSpeed) >= 0.2) {
-      liftPosition = -liftEnc.getIntegratedSensorPosition();
+      liftPosition = liftEnc.getIntegratedSensorPosition();
       liftPID.setSetpoint(liftPosition);
       manualLift = true;
     }
@@ -255,6 +263,7 @@ public class Robot extends TimedRobot {
     }
     
     lifter.set(liftSpeed);
+    */
 
 
     read(); //Put data onto the SmartDashboard
@@ -280,62 +289,13 @@ public class Robot extends TimedRobot {
   
   @Override
   public void testPeriodic() {  
-    if(driver.getRawButtonPressed(1)) {
-      limelight.setPipeline(1);
-    }
-    //DRIVER CONTROLS//
-    final double rot = driver.getRawAxis(2);
-    final double y = driver.getRawAxis(1);
-
-    if(!driver.getRawButton(1) && ( Math.abs(rot) >= 0.15 || Math.abs(y) >= 0.15)) {
-      mainDrive.curvatureDrive(-y, -rot/2., Math.abs(y) < 0.2);
-      accelerator.set(0);
-      shooter.set(0.0);
-    } else if(driver.getRawButton(1) && limelight.hasValidTarget()) { //If the driver is pulling the trigger and the limelight has a target, go into vision-targeting mode
-      System.out.println(limelight.getY());
-      turnPID.setSetpoint(0.0); //Set the turning setpoint to 0 degrees
-      double rotationSpeed = turnPID.calculate(limelight.getX()); //Calculate turning speed based on the limelight reading
-      if(rotationSpeed != 0 && lastTurn != 0) { //Check if the current and last turn speeds are non-zero
-        if((int) rotationSpeed/Math.abs(rotationSpeed) != (int) lastTurn/Math.abs(lastTurn)) { //See if the signs are equal to each other (+ or -)
-          turnPID.reset(); //If the robot must change its direction, reset its PID
-        }
-      }
-      if(rotationSpeed > 0.6) {
-        rotationSpeed = 0.6;
-      }
-      if(rotationSpeed < -0.6) {
-        rotationSpeed = -0.6;
-      }
-      mainDrive.arcadeDrive(0.0, rotationSpeed); //Turn the robot
-      lastTurn = rotationSpeed; //Record the current speed into the previous speed
-
-      shooterSpeedPID.setSetpoint(Interpolator.getInterpolation(limelight.getY())); //TODO: make this change based on distance
-      double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity()); //Calculate the PID speed
-      shooterSpeed = Math.abs(shooterSpeed); //Make sure the wheel only spins forwards
-      shooter.set(shooterSpeed); //Power the flywheel
-      accelerator.set(1); //Power the accelerator
-
-      double shooterError = Math.abs(leftShootEnc.getIntegratedSensorVelocity() - shooterSpeedPID.getSetpoint()); //Calculate the error
-      double turnError = Math.abs(limelight.getX()); //Calculate the error
-      if(shooterError < 100.0 && turnError < 1.0) { //If both are in range, signal the drivers
-        onTarget = true;
-      } else {
-        onTarget = false;
-      }
+    double intaker = manip.getRawAxis(5);
+    if(Math.abs(intaker) >= 0.075) {
+      lifter.set(intaker/2.5);
     } else {
-      mainDrive.arcadeDrive(0, 0);
-      shooter.set(0.0);
-      accelerator.set(0);
+      lifter.set(0);
     }
-    if(driver.getRawButtonReleased(1)) { //If the driver no longer wants to target...
-      turnPID.reset(); //Reset the PIDs and turn the onTarget indicator to false
-      shooterSpeedPID.reset();
-      onTarget = false;
-      //limelight.setPipeline(0);
-    }
-    read(); //Put data onto the SmartDashboard
   }
-
   void rightSide() {
     switch(step) {
       case 1:
