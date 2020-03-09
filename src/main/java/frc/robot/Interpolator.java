@@ -30,7 +30,7 @@ public class Interpolator {
         int i2 = i;
         double m = (speeds[i2]-speeds[i1])/(angles[i2]-angles[i1]);
         double b = speeds[i1] - m*angles[i1];
-        double interpolation = m*angle+b;
+        double interpolation = m*angle+b + 100;
         return interpolation;
     }
 }

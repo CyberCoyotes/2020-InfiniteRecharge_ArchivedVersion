@@ -17,6 +17,7 @@ import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.I2C.Port;
 import edu.wpi.first.wpilibj.controller.PIDController;
@@ -67,6 +68,7 @@ public class Robot extends TimedRobot {
   PIDController shooterSpeedPID = new PIDController(0.00003, 0.0002, 0);
   PIDController strPID = new PIDController(0.05, 0, 0);
   PIDController liftPID = new PIDController(0.00001, 0, 0);
+  Timer timer = new Timer();
   
   DigitalInput proximity_sensor = new DigitalInput(0);//Infrared sensor
   DigitalInput slot1 = new DigitalInput(2); //Digital inputs for the auton switch
@@ -117,7 +119,7 @@ public class Robot extends TimedRobot {
 			autonMode = AutonType.straight;
 			System.out.println("ERROR: autonMode is null. Defaulting to cross auto line.");
     }
-    autonMode =AutonType.straight;//////////////////////////////////////////////////////////
+    autonMode = AutonType.leftSide;//////////////////////////////////////////////////////////
     limelight.setPipeline(1);
     strPID.setSetpoint(0.0); //Set the drive-straight PID setpoint to 0 degrees
     leftDriveEnc.setIntegratedSensorPosition(0, 20);
@@ -127,6 +129,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousPeriodic() {
+    read();
     switch(autonMode) { //This takes the auton mode selected and executes its corresponding function
       case leftSide:
         leftSide();
@@ -183,7 +186,7 @@ public class Robot extends TimedRobot {
 
       double shooterError = Math.abs(leftShootEnc.getIntegratedSensorVelocity() - shooterSpeedPID.getSetpoint()); //Calculate the error
       double turnError = Math.abs(limelight.getX()); //Calculate the error
-      if(shooterError < 300.0 && turnError < 3.0) { //If both are in range, signal the drivers
+      if(shooterError < 300.0 && turnError < 1.5) { //If both are in range, signal the drivers
         onTarget = true;
       } else {
         onTarget = false;
@@ -267,6 +270,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("Interpolation", Interpolator.getInterpolation(limelight.getY()));
     SmartDashboard.putNumber("Lifter", liftEnc.getIntegratedSensorPosition());
     SmartDashboard.putNumber("liftstick", -manip.getRawAxis(5));
+    SmartDashboard.putNumber("Gyro angle", gyro.getAngle());
   }
 
   @Override
@@ -332,7 +336,7 @@ public class Robot extends TimedRobot {
     read(); //Put data onto the SmartDashboard
   }
 
-  void leftSide() {
+  void rightSide() {
     switch(step) {
       case 1:
         if(true) {
@@ -369,20 +373,109 @@ public class Robot extends TimedRobot {
     }
   }
 
-  void rightSide() {
+  void leftSide() {
+    
     switch(step) {
       case 1:
-        if(true) {
-
+        if(gyro.getAngle() < 45) {
+          mainDrive.arcadeDrive(0, -0.5);
         } else {
+          mainDrive.arcadeDrive(0, 0);
           step = 2;
         }
       break;
-    }
+      case 2:
+        if(!onTarget) {
+          turnPID.setSetpoint(0.0); //Set the turning setpoint to 0 degrees
+          double rotationSpeed = turnPID.calculate(limelight.getX()); //Calculate turning speed based on the limelight reading
+          if(rotationSpeed != 0 && lastTurn != 0) { //Check if the current and last turn speeds are non-zero
+            if((int) rotationSpeed/Math.abs(rotationSpeed) != (int) lastTurn/Math.abs(lastTurn)) { //See if the signs are equal to each other (+ or -)
+              turnPID.reset(); //If the robot must change its direction, reset its PID
+            }
+          }
+          if(rotationSpeed > 0.6) {
+            rotationSpeed = 0.6;
+          }
+          if(rotationSpeed < -0.6) {
+            rotationSpeed = -0.6;
+          }
+          mainDrive.arcadeDrive(0.0, rotationSpeed); //Turn the robot
+          lastTurn = rotationSpeed; //Record the current speed into the previous speed
+
+          shooterSpeedPID.setSetpoint(Interpolator.getInterpolation(limelight.getY())); //TODO: make this change based on distance
+          double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity()); //Calculate the PID speed
+          shooterSpeed = Math.abs(shooterSpeed); //Make sure the wheel only spins forwards
+          shooter.set(shooterSpeed); //Power the flywheel
+          accelerator.set(1); //Power the accelerator
+
+          double shooterError = Math.abs(leftShootEnc.getIntegratedSensorVelocity() - shooterSpeedPID.getSetpoint()); //Calculate the error
+          double turnError = Math.abs(limelight.getX()); //Calculate the error
+          if(shooterError < 300.0 && turnError < 3.0) { //If both are in range, signal the drivers
+            onTarget = true;
+          } else {
+            onTarget = false;
+          }
+        } else {
+          step = 3;
+          timer.start();
+        }
+      break;
+      case 3:
+        if(timer.get() < 8) {
+          turnPID.setSetpoint(0.0); //Set the turning setpoint to 0 degrees
+          double rotationSpeed = turnPID.calculate(limelight.getX()); //Calculate turning speed based on the limelight reading
+          if(rotationSpeed != 0 && lastTurn != 0) { //Check if the current and last turn speeds are non-zero
+            if((int) rotationSpeed/Math.abs(rotationSpeed) != (int) lastTurn/Math.abs(lastTurn)) { //See if the signs are equal to each other (+ or -)
+              turnPID.reset(); //If the robot must change its direction, reset its PID
+            }
+          }
+          if(rotationSpeed > 0.6) {
+            rotationSpeed = 0.6;
+          }
+          if(rotationSpeed < -0.6) {
+            rotationSpeed = -0.6;
+          }
+          mainDrive.arcadeDrive(0.0, rotationSpeed); //Turn the robot
+          lastTurn = rotationSpeed; //Record the current speed into the previous speed
+
+          shooterSpeedPID.setSetpoint(Interpolator.getInterpolation(limelight.getY())); //TODO: make this change based on distance
+          double shooterSpeed = shooterSpeedPID.calculate(leftShootEnc.getIntegratedSensorVelocity()); //Calculate the PID speed
+          shooterSpeed = Math.abs(shooterSpeed); //Make sure the wheel only spins forwards
+          shooter.set(shooterSpeed); //Power the flywheel
+          accelerator.set(1); //Power the accelerator
+          advanceBelt.set(-0.75);
+        } else {
+          mainDrive.arcadeDrive(0, 0);
+          shooter.set(0);
+          accelerator.set(0);
+          advanceBelt.set(0);
+          step = 1000;
+        }
+      break;
+      case 4:
+        if(gyro.getAngle() > 0) {
+          mainDrive.arcadeDrive(0, 0.5);
+        } else {
+          mainDrive.arcadeDrive(0, 0);
+          leftDriveEnc.setIntegratedSensorPosition(0, 20);
+          turnPID.reset();
+          step = 5;
+        }
+      break;
+      case 5:
+        if(getDriveDistance() > -200) {
+          double rotationSpeed = turnPID.calculate(gyro.getAngle());
+          mainDrive.arcadeDrive(.5, rotationSpeed);
+        } else {
+          mainDrive.arcadeDrive(0, 0);
+          step = 6;
+        }
+      break;
+    } 
   }
 
   void straight() { //Drive [leaveDistance] inches - figure out how far the robot must move to leave the line (you get points)
-    double leaveDistance = -6;
+    double leaveDistance = -14;
     switch(step) { //This takes in which step of the auton sequence and executes its correlated actions
       case 1: //Step 1:
         if(getDriveDistance() > leaveDistance) { //If the robot has driven less than [leaveDistance]...
