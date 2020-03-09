@@ -12,6 +12,7 @@ import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 import com.kauailabs.navx.frc.AHRS;
 
+import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Joystick;
@@ -91,6 +92,10 @@ public class Robot extends TimedRobot {
     intake.setInverted(true);
     limelight.setPipeline(1);
     liftPID.setSetpoint(liftMin);
+    lifter.setInverted(true);
+
+    CameraServer camera = CameraServer.getInstance();
+    camera.startAutomaticCapture("cam0", 0);
   }
 
   @Override
@@ -156,10 +161,10 @@ public class Robot extends TimedRobot {
     final double rot = driver.getRawAxis(2);
     final double y = driver.getRawAxis(1);
 
-    if(driver.getRawButton(2) && driver.getRawButton(1) && limelight.hasValidTarget()) {
-      Interpolator.getInterpolation(limelight.getY()*1.10);
+    if(driver.getRawButton(2)) {
+      Interpolator.setOffset(400); //TODO alter this number to a better value
     } else {
-      Interpolator.getInterpolation(limelight.getY());
+      Interpolator.setOffset(0);
     }
 
     if(!driver.getRawButton(1) && ( Math.abs(rot) >= 0.15 || Math.abs(y) >= 0.15)) {
@@ -232,7 +237,7 @@ public class Robot extends TimedRobot {
     double liftSpeed = -manip.getRawAxis(5);
     boolean manualLift = false;
     if(Math.abs(liftSpeed) >= 0.2) {
-      liftPosition = liftEnc.getIntegratedSensorPosition();
+      liftPosition = -liftEnc.getIntegratedSensorPosition();
       liftPID.setSetpoint(liftPosition);
       manualLift = true;
     }
@@ -263,7 +268,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("Limelight Y Angle", limelight.getY());
     SmartDashboard.putBoolean("On Target", onTarget);
     SmartDashboard.putNumber("Interpolation", Interpolator.getInterpolation(limelight.getY()));
-    SmartDashboard.putNumber("Lifter", liftEnc.getIntegratedSensorPosition());
+    SmartDashboard.putNumber("Lifter", -liftEnc.getIntegratedSensorPosition());
     SmartDashboard.putNumber("liftstick", -manip.getRawAxis(5));
     SmartDashboard.putNumber("Gyro angle", gyro.getAngle());
   }
