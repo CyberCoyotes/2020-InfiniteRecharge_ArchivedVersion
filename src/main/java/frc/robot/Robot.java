@@ -9,10 +9,12 @@ package frc.robot;
 
 import com.ctre.phoenix.motorcontrol.TalonFXSensorCollection;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
+import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_VictorSPX;
 import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Joystick;
@@ -35,6 +37,7 @@ public class Robot extends TimedRobot {
   SpeedControllerGroup right = new SpeedControllerGroup(right1, right2);
   DifferentialDrive mainDrive = new DifferentialDrive(left, right);
 
+  WPI_TalonSRX fortuneWheel = new WPI_TalonSRX(45);
   WPI_TalonFX lifter = new WPI_TalonFX(10);
   WPI_TalonFX advanceBelt = new WPI_TalonFX(5);
   WPI_TalonFX accelerator = new WPI_TalonFX(6);
@@ -49,6 +52,8 @@ public class Robot extends TimedRobot {
   DoubleSolenoid angler = new DoubleSolenoid(1, 6); 
   Value out = Value.kForward;
   Value in = Value.kReverse;
+
+  AnalogInput pressureSensor = new AnalogInput(0);
 
   Limelight limelight = new Limelight();
   AHRS gyro = new AHRS(Port.kMXP); //NavX
@@ -91,11 +96,11 @@ public class Robot extends TimedRobot {
     accelerator.setInverted(true);
     intake.setInverted(true);
     limelight.setPipeline(1);
-    //liftPID.setSetpoint(liftMin);
-    //lifter.setInverted(true);
+    liftPID.setSetpoint(liftMin);
+    lifter.setInverted(true);
 
-    CameraServer camera = CameraServer.getInstance();
-    camera.startAutomaticCapture("cam0", 0);
+    //CameraServer camera = CameraServer.getInstance();
+    //camera.startAutomaticCapture("cam0", 0);
   }
 
   @Override
@@ -219,20 +224,24 @@ public class Robot extends TimedRobot {
     double advancer = manip.getRawAxis(1);
     double hoppermove = manip.getRawAxis(1);
 
+    if(manip.getRawButton(7)) {
+      fortuneWheel.set(1);
+    } else {
+      fortuneWheel.set(0);
+    }
+    if(manip.getRawButton(8)) {
+      fortuneWheel.set(-1);
+    } else {
+      fortuneWheel.set(0);
+    }
     
-   // double intaker = manip.getRawAxis(5);
-   // if(Math.abs(intaker) >= 0.075) {
-   //   lifter.set(intaker/2.5);
-  //  } else {
-  //    lifter.set(0);
-   // }
 
     if(Math.abs(advancer) >= 0.075) {
       advanceBelt.set(advancer);
       hopper.set(hoppermove);
     } else {
       advanceBelt.set(0);
-      hopper.set(hoppermove);
+      hopper.set(0);
     }
     if(manip.getRawButton(1)) {
       intakePiston.set(out);
@@ -241,29 +250,34 @@ public class Robot extends TimedRobot {
       intakePiston.set(in);
       intake.set(0);
     }
+    if(manip.getRawButton(4)) {
+      intake.set(-.5);
+    } else {
+      intake.set(0);
+    }
 
-   /**  double liftSpeed = -manip.getRawAxis(5);
+     double liftSpeed = -manip.getRawAxis(5);
     boolean manualLift = false;
     if(Math.abs(liftSpeed) >= 0.2) {
-      liftPosition = liftEnc.getIntegratedSensorPosition();
+      liftPosition = -liftEnc.getIntegratedSensorPosition();
       liftPID.setSetpoint(liftPosition);
       manualLift = true;
     }
     if(manualLift) {
-      if(liftSpeed > 0 && liftEnc.getIntegratedSensorPosition() > liftMax) {
+      if(liftSpeed > 0 && -liftEnc.getIntegratedSensorPosition() > 350000.000000) {
         manualLift = false;
-      } else if(liftSpeed < 0 && liftEnc.getIntegratedSensorPosition() < liftMin) {
+      } else if(liftSpeed < 0 && -liftEnc.getIntegratedSensorPosition() < 100000.000000) {
         manualLift = false;
       }
     }
     if(manip.getRawButton(3)) liftPID.setSetpoint(liftMax + 7824);
     if(manip.getRawButton(2)) liftPID.setSetpoint(liftMin);
     if(!manualLift) {    
-      liftSpeed = liftPID.calculate(liftEnc.getIntegratedSensorPosition());
+      liftSpeed = liftPID.calculate(-liftEnc.getIntegratedSensorPosition());
     }
     
     lifter.set(liftSpeed);
-    */
+    
 
 
     read(); //Put data onto the SmartDashboard
@@ -271,6 +285,7 @@ public class Robot extends TimedRobot {
 
 
   void read() {
+    SmartDashboard.putNumber("Pressure", pressureSensor.getVoltage()*50.0-25.0);
     SmartDashboard.putNumber("Shooter Encoder Speed", leftShootEnc.getIntegratedSensorVelocity());
     SmartDashboard.putNumber("Drive Encoder", leftDriveEnc.getIntegratedSensorPosition());
     SmartDashboard.putNumber("Limelight X Angle", limelight.getX());
@@ -289,12 +304,6 @@ public class Robot extends TimedRobot {
   
   @Override
   public void testPeriodic() {  
-    double intaker = manip.getRawAxis(5);
-    if(Math.abs(intaker) >= 0.075) {
-      lifter.set(intaker/2.5);
-    } else {
-      lifter.set(0);
-    }
   }
   void rightSide() {
     switch(step) {
